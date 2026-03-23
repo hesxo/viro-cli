@@ -23,6 +23,14 @@
     "automation"
   ],
   "author": "hesxo",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hesxo/viro-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hesxo/viro-cli/issues"
+  },
+  "homepage": "https://github.com/hesxo/viro-cli#readme",
   "license": "MIT",
   "dependencies": {
     "@clack/prompts": "^0.7.0",

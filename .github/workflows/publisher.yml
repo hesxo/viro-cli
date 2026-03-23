@@ -1,3 +1,16 @@
+# Publishes to npm when you push a version tag: v1.2.3
+#
+# Setup (one-time):
+# 1. npmjs.com → Access Tokens → Generate New Token → "Automation" (classic) or granular publish
+# 2. GitHub repo → Settings → Secrets and variables → Actions → New repository secret
+#    Name: NPM_TOKEN   Value: <the token>
+#
+# Release:
+#   Bump "version" in package.json, commit, then tag and push, e.g.:
+#   git tag v4.0.6 && git push origin v4.0.6
+#
+# Optional: re-enable --provenance after configuring "Trusted publishers" on npm for this repo.
+
 name: viro-cli
 
 on:
@@ -6,13 +19,11 @@ on:
       - "v*"
 
 permissions:
-  id-token: write
   contents: read
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    environment: release
 
     steps:
       - name: Checkout
@@ -23,7 +34,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "24"
+          node-version: "20"
           registry-url: "https://registry.npmjs.org"
 
       - name: Enable Corepack (pnpm)
@@ -40,17 +51,19 @@ jobs:
 
       - name: Show package name + version
         run: |
-          node -p "require('./package.json').name + '@' + require('./package.json').version"
+          node -e "const j=JSON.parse(require('fs').readFileSync('package.json','utf8')); console.log(j.name+'@'+j.version)"
 
       - name: Fail if version already exists on npm
         run: |
-          NAME=$(node -p "require('./package.json').name")
-          VER=$(node -p "require('./package.json').version")
+          NAME=$(node -e "console.log(JSON.parse(require('fs').readFileSync('package.json','utf8')).name)")
+          VER=$(node -e "console.log(JSON.parse(require('fs').readFileSync('package.json','utf8')).version)")
           if npm view "$NAME@$VER" version >/dev/null 2>&1; then
             echo "$NAME@$VER already exists on npm. Bump version and push a new tag."
             exit 1
           fi
           echo "$NAME@$VER not found on npm. Continuing."
 
-      - name: Publish
-        run: npm publish --provenance --access public
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
