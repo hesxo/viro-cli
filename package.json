@@ -1,6 +1,6 @@
 {
-  "name": "viro-cli",
-  "version": "4.0.4",
+  "name": "@hesxo/viro-cli",
+  "version": "4.0.6",
   "description": "AI-powered Git Release & Automation Tool",
   "main": "index.js",
   "type": "module",
@@ -22,7 +22,7 @@
     "ai",
     "automation"
   ],
-  "author": "Thevindu W.",
+  "author": "hesxo",
   "license": "MIT",
   "dependencies": {
     "@clack/prompts": "^0.7.0",
