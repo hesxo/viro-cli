@@ -1,10 +1,11 @@
 {
-  "name": "otto-cli",
+  "name": "viro-cli",
   "version": "4.0.4",
   "description": "AI-powered Git Release & Automation Tool",
   "main": "index.js",
   "type": "module",
   "bin": {
+    "viro-cli": "index.js",
     "otto-cli": "index.js"
   },
   "files": [
@@ -12,6 +13,7 @@
     "src/"
   ],
   "scripts": {
+    "build": "node -e \"console.log('No build step required')\"",
     "start": "node index.js"
   },
   "keywords": [
