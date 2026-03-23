@@ -31,6 +31,10 @@
     "url": "https://github.com/hesxo/viro-cli/issues"
   },
   "homepage": "https://github.com/hesxo/viro-cli#readme",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "license": "MIT",
   "dependencies": {
     "@clack/prompts": "^0.7.0",

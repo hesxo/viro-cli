@@ -1,15 +1,14 @@
-# Publishes to npm when you push a version tag: v1.2.3
+# Publish @hesxo/viro-cli to npm when you push a version tag (e.g. v4.0.6).
 #
-# Setup (one-time):
-# 1. npmjs.com → Access Tokens → Generate New Token → "Automation" (classic) or granular publish
-# 2. GitHub repo → Settings → Secrets and variables → Actions → New repository secret
-#    Name: NPM_TOKEN   Value: <the token>
+# Prerequisites:
+# 1. npmjs.com → Access Tokens → create an "Automation" (classic) token with publish rights
+# 2. GitHub → Settings → Secrets and variables → Actions → New repository secret:
+#    Name: NPM_TOKEN   Value: <paste token>
 #
-# Release:
-#   Bump "version" in package.json, commit, then tag and push, e.g.:
-#   git tag v4.0.6 && git push origin v4.0.6
-#
-# Optional: re-enable --provenance after configuring "Trusted publishers" on npm for this repo.
+# Release flow:
+# 1. Bump "version" in package.json and commit
+# 2. Tag must match version: if version is 4.0.7, tag must be exactly v4.0.7
+#    git tag v4.0.7 && git push origin v4.0.7
 
 name: viro-cli
 
@@ -31,6 +30,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Require NPM_TOKEN secret
+        env:
+          TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::Repository secret NPM_TOKEN is missing. Add it under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -40,30 +48,47 @@ jobs:
       - name: Enable Corepack (pnpm)
         run: corepack enable
 
-      - name: Show pnpm version
-        run: pnpm -v
-
       - name: Install
         run: pnpm install --frozen-lockfile
 
       - name: Build
         run: pnpm build
 
-      - name: Show package name + version
+      - name: Match git tag to package.json version
         run: |
-          node -e "const j=JSON.parse(require('fs').readFileSync('package.json','utf8')); console.log(j.name+'@'+j.version)"
+          TAG_NAME="${GITHUB_REF_NAME}"
+          TAG_VER="${TAG_NAME#v}"
+          PKG_VER=$(node -e "console.log(JSON.parse(require('fs').readFileSync('package.json','utf8')).version)")
+          echo "Tag: $TAG_NAME → version $TAG_VER | package.json: $PKG_VER"
+          if [ "$TAG_VER" != "$PKG_VER" ]; then
+            echo "::error::Tag version '$TAG_VER' must equal package.json version '$PKG_VER'. Bump package.json or fix the tag."
+            exit 1
+          fi
 
-      - name: Fail if version already exists on npm
+      - name: Show package identity
+        run: |
+          node -e "const j=JSON.parse(require('fs').readFileSync('package.json','utf8')); console.log('Publishing', j.name + '@' + j.version)"
+
+      - name: Verify npm auth (token)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm whoami
+
+      - name: Skip if version already on npm
+        id: exists
         run: |
           NAME=$(node -e "console.log(JSON.parse(require('fs').readFileSync('package.json','utf8')).name)")
           VER=$(node -e "console.log(JSON.parse(require('fs').readFileSync('package.json','utf8')).version)")
           if npm view "$NAME@$VER" version >/dev/null 2>&1; then
-            echo "$NAME@$VER already exists on npm. Bump version and push a new tag."
-            exit 1
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "$NAME@$VER is already on npm — skipping publish (idempotent)."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "$NAME@$VER not on npm yet — will publish."
           fi
-          echo "$NAME@$VER not found on npm. Continuing."
 
       - name: Publish to npm
+        if: steps.exists.outputs.exists != 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public
+        run: pnpm publish --access public --no-git-checks
